@@ -1,0 +1,130 @@
+name: Build self-hosted desktop packages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-hosted-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_CHANNEL: stable
+  PUBLIC_RELEASE_CHANNEL: stable
+  PUBLIC_BUILD_VERSION: selfhost-${{ github.run_number }}
+
+jobs:
+  windows:
+    name: Windows x64 portable
+    runs-on: windows-2025
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.93.0"
+          targets: x86_64-pc-windows-msvc
+
+      - name: Set up pnpm
+        shell: pwsh
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.29.3 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build desktop app
+        working-directory: fluxer_desktop
+        env:
+          ELECTRON_ARCH: x64
+        run: pnpm build
+
+      - name: Package Windows app
+        working-directory: fluxer_desktop
+        env:
+          ELECTRON_ARCH: x64
+        run: pnpm exec electron-builder --dir --config electron-builder.config.cjs --win --x64 --publish never
+
+      - name: Create portable ZIP
+        shell: pwsh
+        run: Compress-Archive -Path fluxer_desktop/dist-electron/win-unpacked/* -DestinationPath fluxer_desktop/dist-electron/Fluxer-Windows-x64-portable.zip -Force
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v6
+        with:
+          name: Fluxer-Windows-x64
+          path: fluxer_desktop/dist-electron/Fluxer-Windows-x64-portable.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  macos:
+    name: macOS universal unsigned
+    runs-on: macos-15-intel
+    timeout-minutes: 150
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Set up Python packaging support
+        run: python3 -m pip install --break-system-packages setuptools
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.93.0"
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Set up pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.29.3 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build desktop app
+        working-directory: fluxer_desktop
+        env:
+          ELECTRON_ARCH: universal
+          FLUXER_MAC_UNSIGNED: "true"
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: pnpm build
+
+      - name: Package universal macOS app
+        working-directory: fluxer_desktop
+        env:
+          ELECTRON_ARCH: universal
+          FLUXER_MAC_UNSIGNED: "true"
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: pnpm exec electron-builder --config electron-builder.config.cjs --mac --universal --publish never
+
+      - name: Upload macOS packages
+        uses: actions/upload-artifact@v6
+        with:
+          name: Fluxer-macOS-universal
+          path: |
+            fluxer_desktop/dist-electron/*.dmg
+            fluxer_desktop/dist-electron/*-mac.zip
+          if-no-files-found: error
+          retention-days: 30
