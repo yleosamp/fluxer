@@ -29,9 +29,12 @@ const isMacBuild = process.argv.includes('--mac');
 const isWindowsBuild = process.argv.includes('--win');
 const targetPlatform = isLinuxBuild ? 'linux' : isMacBuild ? 'darwin' : isWindowsBuild ? 'win32' : process.platform;
 const metadataName = isLinuxBuild ? linuxPackageName : packageName;
-const provisioningProfile = isCanary
-	? 'build_resources/profiles/Fluxer_Canary.provisionprofile'
-	: 'build_resources/profiles/Fluxer.provisionprofile';
+const isUnsignedMacBuild = process.env.FLUXER_MAC_UNSIGNED === 'true';
+const provisioningProfile = isUnsignedMacBuild
+	? undefined
+	: isCanary
+		? 'build_resources/profiles/Fluxer_Canary.provisionprofile'
+		: 'build_resources/profiles/Fluxer.provisionprofile';
 const supportedTargetArchs = ['x64', 'arm64'];
 const supportedMacTargetArchs = [...supportedTargetArchs, 'universal'];
 const electronArch = process.env.ELECTRON_ARCH;
@@ -1392,9 +1395,10 @@ module.exports = {
 		minimumSystemVersion: macOSMinimumSystemVersion,
 		icon: `build_resources/${iconDir}/_compiled/AppIcon.icns`,
 		darkModeSupport: true,
-		hardenedRuntime: true,
+		identity: isUnsignedMacBuild ? null : undefined,
+		hardenedRuntime: !isUnsignedMacBuild,
 		gatekeeperAssess: false,
-		notarize: true,
+		notarize: !isUnsignedMacBuild,
 		provisioningProfile,
 		entitlements: isCanary
 			? 'build_resources/entitlements.mac.canary.plist'
