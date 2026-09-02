@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: Build self-hosted web app
+
+on:
+  workflow_dispatch:
+    inputs:
+      build-version:
+        description: "Optional explicit Fluxer build version"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  actions: read
+  contents: write
+  packages: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/_build-image.yaml
+    secrets: inherit
+    with:
+      image: fluxer-app-proxy-self-hosted
+      dockerfile: fluxer_app_proxy/Dockerfile
+      build-version: ${{ inputs['build-version'] }}
+      extra-build-args: |
+        FLUXER_APP_PROXY_TIME_FREEZE_ENABLED=false
