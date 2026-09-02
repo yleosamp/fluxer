@@ -52,6 +52,10 @@ const NOISE_SUPPRESSION_STANDARD_DESCRIPTOR = msg({
 	message: 'Standard',
 	comment: 'Noise suppression option using the browser built-in engine. Keep it concise.',
 });
+const NOISE_SUPPRESSION_RNNOISE_DESCRIPTOR = msg({
+	message: 'RNNoise',
+	comment: 'Noise suppression option using the open-source RNNoise engine.',
+});
 const NONE_DESCRIPTOR = msg({
 	message: 'None',
 	comment: 'Noise suppression option that disables suppression.',
@@ -88,7 +92,8 @@ export const AudioProcessingModal = observer(() => {
 	const deepFilterNoiseReductionLevel = VoiceSettings.deepFilterNoiseSuppressionLevel;
 	const deepFilterDefaultNoiseReductionLevel = 80;
 	const browserNsEnabled = VoiceSettings.noiseSuppression;
-	const method = resolveNoiseSuppressionMethod(deepFilterEnabled, browserNsEnabled);
+	const rnnoiseEnabled = VoiceSettings.rnNoiseSuppression;
+	const method = resolveNoiseSuppressionMethod(deepFilterEnabled, rnnoiseEnabled, browserNsEnabled);
 	const modeOptions: Array<RadioOption<VoiceProcessingMode>> = [
 		{
 			value: 'voice',
@@ -112,6 +117,10 @@ export const AudioProcessingModal = observer(() => {
 			label: i18n._(NOISE_SUPPRESSION_ENHANCED_DESCRIPTOR),
 		},
 		{
+			value: 'rnnoise',
+			label: i18n._(NOISE_SUPPRESSION_RNNOISE_DESCRIPTOR),
+		},
+		{
 			value: 'standard',
 			label: i18n._(NOISE_SUPPRESSION_STANDARD_DESCRIPTOR),
 		},
@@ -123,13 +132,32 @@ export const AudioProcessingModal = observer(() => {
 	const setNoiseSuppressionMethod = (next: NoiseSuppressionMethod) => {
 		switch (next) {
 			case 'enhanced':
-				VoiceSettingsCommands.update({deepFilterNoiseSuppression: true, noiseSuppression: false});
+				VoiceSettingsCommands.update({
+					deepFilterNoiseSuppression: true,
+					rnNoiseSuppression: false,
+					noiseSuppression: false,
+				});
+				return;
+			case 'rnnoise':
+				VoiceSettingsCommands.update({
+					deepFilterNoiseSuppression: false,
+					rnNoiseSuppression: true,
+					noiseSuppression: false,
+				});
 				return;
 			case 'standard':
-				VoiceSettingsCommands.update({deepFilterNoiseSuppression: false, noiseSuppression: true});
+				VoiceSettingsCommands.update({
+					deepFilterNoiseSuppression: false,
+					rnNoiseSuppression: false,
+					noiseSuppression: true,
+				});
 				return;
 			case 'none':
-				VoiceSettingsCommands.update({deepFilterNoiseSuppression: false, noiseSuppression: false});
+				VoiceSettingsCommands.update({
+					deepFilterNoiseSuppression: false,
+					rnNoiseSuppression: false,
+					noiseSuppression: false,
+				});
 				return;
 		}
 	};

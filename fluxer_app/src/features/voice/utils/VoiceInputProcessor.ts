@@ -3,6 +3,7 @@
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import VoiceSettings from '@app/features/voice/state/VoiceSettings';
 import {buildDeepFilterAudioChain, type DeepFilterAudioChain} from '@app/features/voice/utils/DeepFilterNoiseProcessor';
+import {buildRnnoiseAudioChain, type RnnoiseAudioChain} from '@app/features/voice/utils/RnnoiseNoiseProcessor';
 import {
 	getActiveInputDeviceLabel,
 	type ResolvedVoiceProcessing,
@@ -20,16 +21,19 @@ class VoiceInputTrackProcessor implements TrackProcessor<Track.Kind.Audio, Audio
 	private gainNode: GainNode | null = null;
 	private passthroughDestination: MediaStreamAudioDestinationNode | null = null;
 	private deepFilterChain: DeepFilterAudioChain | null = null;
+	private rnnoiseChain: RnnoiseAudioChain | null = null;
 
 	constructor(
 		private inputVolumePercent: number,
 		private deepFilterEnabled: boolean,
+		private rnnoiseEnabled: boolean,
 		private deepFilterNoiseReductionLevel: number,
 	) {}
 
-	matchesMode(deepFilterEnabled: boolean, deepFilterNoiseReductionLevel: number): boolean {
+	matchesMode(deepFilterEnabled: boolean, rnnoiseEnabled: boolean, deepFilterNoiseReductionLevel: number): boolean {
 		return (
 			this.deepFilterEnabled === deepFilterEnabled &&
+			this.rnnoiseEnabled === rnnoiseEnabled &&
 			this.deepFilterNoiseReductionLevel === deepFilterNoiseReductionLevel
 		);
 	}
@@ -70,6 +74,13 @@ class VoiceInputTrackProcessor implements TrackProcessor<Track.Kind.Audio, Audio
 				this.processedTrack = chain.processedTrack;
 				return;
 			}
+			if (this.rnnoiseEnabled) {
+				const chain = await buildRnnoiseAudioChain({audioContext: opts.audioContext});
+				this.rnnoiseChain = chain;
+				this.gainNode.connect(chain.inputDestination);
+				this.processedTrack = chain.processedTrack;
+				return;
+			}
 			this.passthroughDestination = opts.audioContext.createMediaStreamDestination();
 			this.gainNode.connect(this.passthroughDestination);
 			const passthroughTrack = this.passthroughDestination.stream.getAudioTracks()[0];
@@ -94,6 +105,13 @@ class VoiceInputTrackProcessor implements TrackProcessor<Track.Kind.Audio, Audio
 				logger.warn('Failed to dispose DeepFilter chain for voice input', error);
 			}
 		}
+		if (this.rnnoiseChain) {
+			try {
+				await this.rnnoiseChain.dispose();
+			} catch (error) {
+				logger.warn('Failed to dispose RNNoise chain for voice input', error);
+			}
+		}
 		if (this.processedTrack && this.processedTrack.readyState !== 'ended') {
 			try {
 				this.processedTrack.stop();
@@ -105,6 +123,7 @@ class VoiceInputTrackProcessor implements TrackProcessor<Track.Kind.Audio, Audio
 		this.gainNode = null;
 		this.passthroughDestination = null;
 		this.deepFilterChain = null;
+		this.rnnoiseChain = null;
 		this.processedTrack = undefined;
 	}
 }
@@ -118,7 +137,8 @@ function resolveActiveVoiceProcessing(): ResolvedVoiceProcessing {
 }
 
 function shouldUseVoiceInputProcessor(): boolean {
-	return resolveActiveVoiceProcessing().deepFilter || VoiceSettings.getInputVolume() !== 100;
+	const profile = resolveActiveVoiceProcessing();
+	return profile.deepFilter || profile.rnnoise || VoiceSettings.getInputVolume() !== 100;
 }
 
 export async function syncVoiceInputProcessor(track: LocalAudioTrack | null): Promise<void> {
@@ -128,24 +148,34 @@ export async function syncVoiceInputProcessor(track: LocalAudioTrack | null): Pr
 	}
 	const profile = resolveActiveVoiceProcessing();
 	const deepFilterEnabled = profile.deepFilter;
+	const rnnoiseEnabled = profile.rnnoise;
 	const deepFilterNoiseReductionLevel = profile.deepFilterNoiseReductionLevel;
 	const inputVolumePercent = VoiceSettings.getInputVolume();
 	if (!shouldUseVoiceInputProcessor()) {
 		await removeVoiceInputProcessor(track);
 		return;
 	}
-	if (activeTrack === track && activeProcessor?.matchesMode(deepFilterEnabled, deepFilterNoiseReductionLevel)) {
+	if (
+		activeTrack === track &&
+		activeProcessor?.matchesMode(deepFilterEnabled, rnnoiseEnabled, deepFilterNoiseReductionLevel)
+	) {
 		activeProcessor.updateInputVolumePercent(inputVolumePercent);
 		return;
 	}
 	await removeVoiceInputProcessor();
-	const processor = new VoiceInputTrackProcessor(inputVolumePercent, deepFilterEnabled, deepFilterNoiseReductionLevel);
+	const processor = new VoiceInputTrackProcessor(
+		inputVolumePercent,
+		deepFilterEnabled,
+		rnnoiseEnabled,
+		deepFilterNoiseReductionLevel,
+	);
 	try {
 		await track.setProcessor(processor);
 	} catch (error) {
 		logger.warn('Voice input processor install failed; publication remains on raw mic track', {
 			error,
 			deepFilterEnabled,
+			rnnoiseEnabled,
 			inputVolumePercent,
 		});
 		try {
@@ -157,7 +187,7 @@ export async function syncVoiceInputProcessor(track: LocalAudioTrack | null): Pr
 	}
 	activeTrack = track;
 	activeProcessor = processor;
-	logger.debug('Applied voice input processor', {inputVolumePercent, deepFilterEnabled});
+	logger.debug('Applied voice input processor', {inputVolumePercent, deepFilterEnabled, rnnoiseEnabled});
 }
 
 export function updateVoiceInputGain(track: LocalAudioTrack | null): void {

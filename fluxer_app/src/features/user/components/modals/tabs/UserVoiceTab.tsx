@@ -51,6 +51,11 @@ import {
 	VOICE_OUTPUT_DEVICE_DESCRIPTOR,
 	VOICE_OUTPUT_VOLUME_DESCRIPTOR,
 } from '@app/features/voice/utils/VoiceMessageDescriptors';
+import {
+	createNoiseSuppressionSettingsPatch,
+	resolveNoiseSuppressionMethod,
+	type NoiseSuppressionMethod,
+} from '@app/features/voice/utils/VoiceNoiseSuppressionUtils';
 import type {VoiceProcessingMode} from '@app/features/voice/utils/VoiceProcessingProfile';
 import {VOICE_VOLUME_MAX_PERCENT} from '@app/features/voice/utils/VoiceVolumeUtils';
 import {msg} from '@lingui/core/macro';
@@ -90,6 +95,10 @@ const NOISE_SUPPRESSION_ENHANCED_DESCRIPTOR = msg({
 const NOISE_SUPPRESSION_STANDARD_DESCRIPTOR = msg({
 	message: 'Standard',
 	comment: 'Noise suppression option label in the voice tab (browser default). Keep it concise.',
+});
+const NOISE_SUPPRESSION_RNNOISE_DESCRIPTOR = msg({
+	message: 'RNNoise',
+	comment: 'Noise suppression option label in the voice tab (open-source RNNoise engine).',
 });
 const NONE_DESCRIPTOR = msg({
 	message: 'None',
@@ -193,18 +202,10 @@ const MACOS_DESCRIPTOR = msg({
 	comment: 'Subsection title in the voice tab for macOS-specific settings. Keep it concise.',
 });
 
-type NoiseSuppressionMethod = 'enhanced' | 'standard' | 'none';
-
 interface VoiceTabProps {
 	voiceSettings: typeof VoiceSettings;
 	hasPremium: boolean;
 	autoRequestPermission?: boolean;
-}
-
-function resolveNoiseSuppressionMethod(deepFilterEnabled: boolean, browserNsEnabled: boolean): NoiseSuppressionMethod {
-	if (deepFilterEnabled) return 'enhanced';
-	if (browserNsEnabled) return 'standard';
-	return 'none';
 }
 
 export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoRequestPermission = true}) => {
@@ -218,6 +219,7 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoR
 		noiseSuppression,
 		autoGainControl,
 		deepFilterNoiseSuppression,
+		rnNoiseSuppression,
 		deepFilterNoiseSuppressionLevel,
 		vadThreshold,
 		vadAutoSensitivity,
@@ -292,24 +294,19 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoR
 			desc: i18n._(CUSTOM_PROFILE_DESCRIPTION_DESCRIPTOR),
 		},
 	];
-	const noiseSuppressionMethod = resolveNoiseSuppressionMethod(deepFilterNoiseSuppression, noiseSuppression);
+	const noiseSuppressionMethod = resolveNoiseSuppressionMethod({
+		deepFilterNoiseSuppression,
+		rnNoiseSuppression,
+		noiseSuppression,
+	});
 	const noiseSuppressionOptions: Array<ComboboxOption<NoiseSuppressionMethod>> = [
 		{value: 'enhanced', label: i18n._(NOISE_SUPPRESSION_ENHANCED_DESCRIPTOR)},
+		{value: 'rnnoise', label: i18n._(NOISE_SUPPRESSION_RNNOISE_DESCRIPTOR)},
 		{value: 'standard', label: i18n._(NOISE_SUPPRESSION_STANDARD_DESCRIPTOR)},
 		{value: 'none', label: i18n._(NONE_DESCRIPTOR)},
 	];
 	const setNoiseSuppressionMethod = (method: NoiseSuppressionMethod) => {
-		switch (method) {
-			case 'enhanced':
-				VoiceSettingsCommands.update({deepFilterNoiseSuppression: true, noiseSuppression: false});
-				return;
-			case 'standard':
-				VoiceSettingsCommands.update({deepFilterNoiseSuppression: false, noiseSuppression: true});
-				return;
-			case 'none':
-				VoiceSettingsCommands.update({deepFilterNoiseSuppression: false, noiseSuppression: false});
-				return;
-		}
+		VoiceSettingsCommands.update(createNoiseSuppressionSettingsPatch(method));
 	};
 	const setPushToTalkEnabled = (enabled: boolean) => {
 		const mode = enabled ? 'voice_push_to_talk' : 'voice_activity';
@@ -686,6 +683,7 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoR
 						noiseSuppression,
 						autoGainControl,
 						deepFilterNoiseSuppression,
+						rnNoiseSuppression,
 						deepFilterNoiseSuppressionLevel,
 						voiceProcessingMode,
 					}}

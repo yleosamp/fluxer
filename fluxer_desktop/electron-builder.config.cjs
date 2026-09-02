@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 const isCanary = process.env.BUILD_CHANNEL === 'canary';
+const isSelfHostedBuild = process.env.FLUXER_SELF_HOSTED === 'true';
 const {execFile} = require('node:child_process');
 const fs = require('node:fs/promises');
 const os = require('node:os');
@@ -9,7 +10,7 @@ const {promisify} = require('node:util');
 const execFileAsync = promisify(execFile);
 const productName = isCanary ? 'Fluxer Canary' : 'Fluxer';
 const artifactProductName = isCanary ? 'Fluxer-Canary' : 'Fluxer';
-const appId = isCanary ? 'app.fluxer.canary' : 'app.fluxer';
+const appId = isSelfHostedBuild ? 'com.yleoeditor.fluxer' : isCanary ? 'app.fluxer.canary' : 'app.fluxer';
 const iconDir = isCanary ? 'icons-canary' : 'icons-stable';
 const packageName = isCanary ? 'fluxer_desktop_canary' : 'fluxer_desktop';
 const linuxPackageName = isCanary ? 'fluxer-canary' : 'fluxer';
@@ -55,7 +56,7 @@ const winGameCaptureTargetArchs =
 	targetPlatform === 'win32' && targetNativeArch ? [targetNativeArch] : supportedTargetArchs;
 const winTargets = [
 	{
-		target: 'dir',
+		target: 'nsis',
 		arch: targetArchs,
 	},
 ];
@@ -1395,14 +1396,16 @@ module.exports = {
 		minimumSystemVersion: macOSMinimumSystemVersion,
 		icon: `build_resources/${iconDir}/_compiled/AppIcon.icns`,
 		darkModeSupport: true,
-		identity: isUnsignedMacBuild ? null : undefined,
+		identity: isUnsignedMacBuild ? '-' : undefined,
 		hardenedRuntime: !isUnsignedMacBuild,
 		gatekeeperAssess: false,
 		notarize: !isUnsignedMacBuild,
 		provisioningProfile,
-		entitlements: isCanary
-			? 'build_resources/entitlements.mac.canary.plist'
-			: 'build_resources/entitlements.mac.stable.plist',
+		entitlements: isUnsignedMacBuild
+			? 'build_resources/entitlements.mac.selfhosted.plist'
+			: isCanary
+				? 'build_resources/entitlements.mac.canary.plist'
+				: 'build_resources/entitlements.mac.stable.plist',
 		entitlementsInherit: 'build_resources/entitlements.mac.inherit.plist',
 		target: [
 			{
@@ -1439,6 +1442,19 @@ module.exports = {
 	win: {
 		icon: `build_resources/${iconDir}/icon.ico`,
 		target: winTargets,
+	},
+	nsis: {
+		artifactName: `${artifactProductName}-Setup-\${version}-\${arch}.\${ext}`,
+		oneClick: false,
+		allowToChangeInstallationDirectory: true,
+		perMachine: false,
+		createDesktopShortcut: true,
+		createStartMenuShortcut: true,
+		shortcutName: productName,
+		deleteAppDataOnUninstall: false,
+		runAfterFinish: true,
+		installerIcon: `build_resources/${iconDir}/icon.ico`,
+		uninstallerIcon: `build_resources/${iconDir}/icon.ico`,
 	},
 	portable: {
 		artifactName: `${artifactProductName}-\${version}-portable-\${os}-\${arch}.\${ext}`,

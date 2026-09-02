@@ -8,7 +8,7 @@ import {msg} from '@lingui/core/macro';
 
 export const logger = new Logger('VoiceConnectionStatus');
 
-export type NoiseSuppressionMethod = 'enhanced' | 'standard' | 'none';
+export type NoiseSuppressionMethod = 'enhanced' | 'rnnoise' | 'standard' | 'none';
 
 export const AUDIO_PROCESSING_DIRECT_INPUT_RAW_DESCRIPTOR = msg({
 	message: 'Audio processing (direct input, raw)',
@@ -22,6 +22,10 @@ export const AUDIO_PROCESSING_CUSTOM_ENHANCED_DESCRIPTOR = msg({
 	message: 'Audio processing (custom, enhanced)',
 	comment:
 		'Tooltip in the voice status popout. Describes the custom mic processing profile with enhanced (DeepFilterNet3) noise suppression.',
+});
+export const AUDIO_PROCESSING_CUSTOM_RNNOISE_DESCRIPTOR = msg({
+	message: 'Audio processing (custom, RNNoise)',
+	comment: 'Tooltip for the custom mic profile with RNNoise suppression.',
 });
 export const AUDIO_PROCESSING_CUSTOM_DESCRIPTOR = msg({
 	message: 'Audio processing (custom)',
@@ -192,20 +196,32 @@ export function getAudioProcessingTooltip(
 	mode: VoiceProcessingMode,
 	browserNs: boolean,
 	deepFilter: boolean,
+	rnnoise = false,
 ): string {
 	if (mode === 'studio') return i18n._(AUDIO_PROCESSING_DIRECT_INPUT_RAW_DESCRIPTOR);
 	if (mode === 'voice') return i18n._(AUDIO_PROCESSING_FOCUSED_VOICE_DESCRIPTOR);
 	if (deepFilter) return i18n._(AUDIO_PROCESSING_CUSTOM_ENHANCED_DESCRIPTOR);
+	if (rnnoise) return i18n._(AUDIO_PROCESSING_CUSTOM_RNNOISE_DESCRIPTOR);
 	if (browserNs) return i18n._(AUDIO_PROCESSING_CUSTOM_DESCRIPTOR);
 	return i18n._(AUDIO_PROCESSING_CUSTOM_NO_SUPPRESSION_DESCRIPTOR);
 }
 
-export function isAudioProcessingActive(mode: VoiceProcessingMode, browserNs: boolean, deepFilter: boolean): boolean {
-	return mode === 'voice' || (mode === 'custom' && (browserNs || deepFilter));
+export function isAudioProcessingActive(
+	mode: VoiceProcessingMode,
+	browserNs: boolean,
+	deepFilter: boolean,
+	rnnoise = false,
+): boolean {
+	return mode === 'voice' || (mode === 'custom' && (browserNs || deepFilter || rnnoise));
 }
 
-export function resolveNoiseSuppressionMethod(deepFilter: boolean, browserNs: boolean): NoiseSuppressionMethod {
+export function resolveNoiseSuppressionMethod(
+	deepFilter: boolean,
+	rnnoise: boolean,
+	browserNs: boolean,
+): NoiseSuppressionMethod {
 	if (deepFilter) return 'enhanced';
+	if (rnnoise) return 'rnnoise';
 	if (browserNs) return 'standard';
 	return 'none';
 }

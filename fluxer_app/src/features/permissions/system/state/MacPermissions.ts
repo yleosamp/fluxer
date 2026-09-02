@@ -149,6 +149,7 @@ class MacPermissions {
 	recordModalClosed(focus?: MacPermissionKind): void {
 		if (focus) {
 			this.decisions[focus] = this.decisionFromStatus(this.statuses[focus]);
+			this.setupCompleted = true;
 			return;
 		}
 		this.setupCompleted = true;

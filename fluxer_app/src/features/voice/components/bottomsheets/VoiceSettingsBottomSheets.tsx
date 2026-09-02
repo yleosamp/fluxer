@@ -56,6 +56,10 @@ const STANDARD_DESCRIPTOR = msg({
 	message: 'Standard',
 	comment: 'Noise suppression option label (mobile voice settings). Browser built-in engine.',
 });
+const RNNOISE_DESCRIPTOR = msg({
+	message: 'RNNoise',
+	comment: 'Noise suppression option label (mobile voice settings). Open-source RNNoise engine.',
+});
 const OFF_DESCRIPTOR = msg({
 	message: 'Off',
 	comment: 'Noise suppression option label (mobile voice settings). Suppression disabled.',
@@ -118,35 +122,58 @@ export const VoiceAudioSettingsBottomSheet: React.FC<VoiceAudioSettingsBottomShe
 		const processingMode = getActiveVoiceProcessingMode(voiceSettings);
 		const isCustomMode = processingMode === 'custom';
 		const deepFilterEnabled = voiceSettings.deepFilterNoiseSuppression;
+		const rnnoiseEnabled = voiceSettings.rnNoiseSuppression;
 		const browserNsEnabled = voiceSettings.noiseSuppression;
 		const processingModeLabels: Record<VoiceProcessingMode, string> = {
 			voice: i18n._(VOICE_FOCUSED_VOICE_PROFILE_DESCRIPTOR),
 			studio: i18n._(VOICE_DIRECT_INPUT_PROFILE_DESCRIPTOR),
 			custom: i18n._(CUSTOM_DESCRIPTOR),
 		};
-		type NoiseSuppressionChoice = 'enhanced' | 'standard' | 'none';
+		type NoiseSuppressionChoice = 'enhanced' | 'rnnoise' | 'standard' | 'none';
 		const noiseSuppressionChoice: NoiseSuppressionChoice = deepFilterEnabled
 			? 'enhanced'
-			: browserNsEnabled
-				? 'standard'
-				: 'none';
+			: rnnoiseEnabled
+				? 'rnnoise'
+				: browserNsEnabled
+					? 'standard'
+					: 'none';
 		const noiseSuppressionLabels: Record<NoiseSuppressionChoice, string> = {
 			enhanced: i18n._(ENHANCED_DESCRIPTOR),
+			rnnoise: i18n._(RNNOISE_DESCRIPTOR),
 			standard: i18n._(STANDARD_DESCRIPTOR),
 			none: i18n._(OFF_DESCRIPTOR),
 		};
 		const cycleNoiseSuppression = () => {
-			const order: Array<NoiseSuppressionChoice> = ['enhanced', 'standard', 'none'];
+			const order: Array<NoiseSuppressionChoice> = ['enhanced', 'rnnoise', 'standard', 'none'];
 			const next = order[(order.indexOf(noiseSuppressionChoice) + 1) % order.length];
 			switch (next) {
 				case 'enhanced':
-					VoiceSettingsCommands.update({deepFilterNoiseSuppression: true, noiseSuppression: false});
+					VoiceSettingsCommands.update({
+						deepFilterNoiseSuppression: true,
+						rnNoiseSuppression: false,
+						noiseSuppression: false,
+					});
+					return;
+				case 'rnnoise':
+					VoiceSettingsCommands.update({
+						deepFilterNoiseSuppression: false,
+						rnNoiseSuppression: true,
+						noiseSuppression: false,
+					});
 					return;
 				case 'standard':
-					VoiceSettingsCommands.update({deepFilterNoiseSuppression: false, noiseSuppression: true});
+					VoiceSettingsCommands.update({
+						deepFilterNoiseSuppression: false,
+						rnNoiseSuppression: false,
+						noiseSuppression: true,
+					});
 					return;
 				case 'none':
-					VoiceSettingsCommands.update({deepFilterNoiseSuppression: false, noiseSuppression: false});
+					VoiceSettingsCommands.update({
+						deepFilterNoiseSuppression: false,
+						rnNoiseSuppression: false,
+						noiseSuppression: false,
+					});
 					return;
 			}
 		};

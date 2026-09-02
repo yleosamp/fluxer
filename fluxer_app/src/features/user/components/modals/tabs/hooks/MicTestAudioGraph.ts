@@ -3,11 +3,13 @@
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {createVoiceSoftClipNode} from '@app/features/voice/engine/VoiceSharedAudioContext';
 import {buildDeepFilterAudioChain, type DeepFilterAudioChain} from '@app/features/voice/utils/DeepFilterNoiseProcessor';
+import {buildRnnoiseAudioChain, type RnnoiseAudioChain} from '@app/features/voice/utils/RnnoiseNoiseProcessor';
 
 const logger = new Logger('MicTestAudioGraph');
 
 export interface MicTestAudioGraph {
 	source: MediaStreamAudioSourceNode;
+	processedSource: MediaStreamAudioSourceNode;
 	analyser: AnalyserNode;
 	inputGain: GainNode;
 	delay: DelayNode;
@@ -26,6 +28,7 @@ interface CreateMicTestAudioGraphOptions {
 	playbackTarget: AudioNode;
 	playbackDelaySeconds: number;
 	deepFilter: boolean;
+	rnnoise: boolean;
 	deepFilterNoiseReductionLevel: number;
 }
 
@@ -37,6 +40,7 @@ export async function createMicTestAudioGraph({
 	playbackTarget,
 	playbackDelaySeconds,
 	deepFilter,
+	rnnoise,
 	deepFilterNoiseReductionLevel,
 }: CreateMicTestAudioGraphOptions): Promise<MicTestAudioGraph> {
 	const source = audioContext.createMediaStreamSource(new MediaStream([sourceTrack]));
@@ -45,6 +49,7 @@ export async function createMicTestAudioGraph({
 	source.connect(inputGainNode);
 
 	let deepFilterChain: DeepFilterAudioChain | null = null;
+	let rnnoiseChain: RnnoiseAudioChain | null = null;
 	let passthroughDestination: MediaStreamAudioDestinationNode | null = null;
 	let processedTrack: MediaStreamTrack | null = null;
 	try {
@@ -55,6 +60,10 @@ export async function createMicTestAudioGraph({
 			});
 			inputGainNode.connect(deepFilterChain.inputDestination);
 			processedTrack = deepFilterChain.processedTrack;
+		} else if (rnnoise) {
+			rnnoiseChain = await buildRnnoiseAudioChain({audioContext});
+			inputGainNode.connect(rnnoiseChain.inputDestination);
+			processedTrack = rnnoiseChain.processedTrack;
 		} else {
 			passthroughDestination = audioContext.createMediaStreamDestination();
 			inputGainNode.connect(passthroughDestination);
@@ -73,10 +82,16 @@ export async function createMicTestAudioGraph({
 				logger.debug('Failed to dispose DeepFilter chain after mic test graph init failure', disposeError);
 			});
 		}
+		if (rnnoiseChain) {
+			await rnnoiseChain.dispose().catch((disposeError) => {
+				logger.debug('Failed to dispose RNNoise chain after mic test graph init failure', disposeError);
+			});
+		}
 		throw error;
 	}
 
 	const analyser = audioContext.createAnalyser();
+	const processedSource = audioContext.createMediaStreamSource(new MediaStream([processedTrack]));
 	const delay = audioContext.createDelay(Math.max(1, playbackDelaySeconds + 0.25));
 	const outputGainNode = audioContext.createGain();
 	analyser.fftSize = 2048;
@@ -86,7 +101,7 @@ export async function createMicTestAudioGraph({
 	const softClip = createVoiceSoftClipNode(audioContext);
 	const softClipInput = softClip?.input ?? outputGainNode;
 	const softClipOutput: AudioNode = softClip?.output ?? outputGainNode;
-	inputGainNode.connect(analyser);
+	processedSource.connect(analyser);
 	analyser.connect(delay);
 	delay.connect(outputGainNode);
 	if (softClip) outputGainNode.connect(softClip.input);
@@ -94,6 +109,7 @@ export async function createMicTestAudioGraph({
 
 	const dispose = async () => {
 		source.disconnect();
+		processedSource.disconnect();
 		analyser.disconnect();
 		inputGainNode.disconnect();
 		delay.disconnect();
@@ -107,10 +123,16 @@ export async function createMicTestAudioGraph({
 				logger.warn('Failed to dispose DeepFilter chain for mic test graph', error);
 			});
 		}
+		if (rnnoiseChain) {
+			await rnnoiseChain.dispose().catch((error) => {
+				logger.warn('Failed to dispose RNNoise chain for mic test graph', error);
+			});
+		}
 	};
 
 	return {
 		source,
+		processedSource,
 		analyser,
 		inputGain: inputGainNode,
 		delay,

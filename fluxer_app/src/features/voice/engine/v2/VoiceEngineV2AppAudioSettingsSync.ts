@@ -21,6 +21,7 @@ export interface VoiceEngineV2AppAudioSettingsSnapshot {
 	readonly browserNoiseSuppression: boolean;
 	readonly autoGainControl: boolean;
 	readonly deepFilter: boolean;
+	readonly rnnoise: boolean;
 	readonly deepFilterNoiseReductionLevel: number;
 	readonly contentHint: '' | 'speech' | 'music';
 }
@@ -45,6 +46,7 @@ function assertAudioSettingsSnapshot(snapshot: VoiceEngineV2AppAudioSettingsSnap
 	assert.equal(typeof snapshot.browserNoiseSuppression, 'boolean', `${name}.browserNoiseSuppression must be a boolean`);
 	assert.equal(typeof snapshot.autoGainControl, 'boolean', `${name}.autoGainControl must be a boolean`);
 	assert.equal(typeof snapshot.deepFilter, 'boolean', `${name}.deepFilter must be a boolean`);
+	assert.equal(typeof snapshot.rnnoise, 'boolean', `${name}.rnnoise must be a boolean`);
 }
 
 export function createVoiceEngineV2AppAudioSettingsSnapshot(): VoiceEngineV2AppAudioSettingsSnapshot {
@@ -62,6 +64,7 @@ export function createVoiceEngineV2AppAudioSettingsSnapshot(): VoiceEngineV2AppA
 		browserNoiseSuppression: profile.browserNoiseSuppression,
 		autoGainControl: profile.autoGainControl,
 		deepFilter: profile.deepFilter,
+		rnnoise: profile.rnnoise,
 		deepFilterNoiseReductionLevel: profile.deepFilterNoiseReductionLevel,
 		contentHint: profile.contentHint,
 	};
@@ -89,6 +92,7 @@ export function hasVoiceEngineV2InputProcessorSettingsChanged(
 	assertAudioSettingsSnapshot(previous, 'previous');
 	assertAudioSettingsSnapshot(current, 'current');
 	if (previous.deepFilter !== current.deepFilter) return true;
+	if (previous.rnnoise !== current.rnnoise) return true;
 	if (previous.deepFilterNoiseReductionLevel !== current.deepFilterNoiseReductionLevel) return true;
 	return false;
 }

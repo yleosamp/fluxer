@@ -112,7 +112,13 @@ const ResolvedVoiceConnectionStatusInner = observer(function ResolvedVoiceConnec
 	const processingMode = getActiveVoiceProcessingMode(voiceSettings);
 	const noiseSuppressionEnabled = voiceSettings.noiseSuppression;
 	const deepFilterEnabled = voiceSettings.deepFilterNoiseSuppression;
-	const isProcessingActive = isAudioProcessingActive(processingMode, noiseSuppressionEnabled, deepFilterEnabled);
+	const rnnoiseEnabled = voiceSettings.rnNoiseSuppression;
+	const isProcessingActive = isAudioProcessingActive(
+		processingMode,
+		noiseSuppressionEnabled,
+		deepFilterEnabled,
+		rnnoiseEnabled,
+	);
 	const showVoiceConnectionId = voiceSettings.showVoiceConnectionId;
 	const openNoiseSuppressionModal = useCallback(() => {
 		ModalCommands.push(
@@ -126,6 +132,7 @@ const ResolvedVoiceConnectionStatusInner = observer(function ResolvedVoiceConnec
 		processingMode,
 		noiseSuppressionEnabled,
 		deepFilterEnabled,
+		rnnoiseEnabled,
 	);
 	const currentLatency = MediaEngine.currentLatency;
 	const latencyHistory = MediaEngine.latencyHistory.slice(-30);

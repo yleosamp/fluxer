@@ -54,7 +54,13 @@ export const MockedVoiceConnectionStatus = observer(() => {
 	const processingMode = getActiveVoiceProcessingMode(voiceSettings);
 	const noiseSuppressionEnabled = voiceSettings.noiseSuppression;
 	const deepFilterEnabled = voiceSettings.deepFilterNoiseSuppression;
-	const isProcessingActive = isAudioProcessingActive(processingMode, noiseSuppressionEnabled, deepFilterEnabled);
+	const rnnoiseEnabled = voiceSettings.rnNoiseSuppression;
+	const isProcessingActive = isAudioProcessingActive(
+		processingMode,
+		noiseSuppressionEnabled,
+		deepFilterEnabled,
+		rnnoiseEnabled,
+	);
 	const showVoiceConnectionId = voiceSettings.showVoiceConnectionId;
 	const openNoiseSuppressionModal = useCallback(() => {
 		ModalCommands.push(
@@ -68,6 +74,7 @@ export const MockedVoiceConnectionStatus = observer(() => {
 		processingMode,
 		noiseSuppressionEnabled,
 		deepFilterEnabled,
+		rnnoiseEnabled,
 	);
 	const disconnectLabel = i18n._(VOICE_DISCONNECT_DESCRIPTOR);
 	const {openProps: popoutProps} = usePopout('voice-details-popout');

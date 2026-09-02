@@ -12,6 +12,7 @@ export interface VoiceProcessingSettingsLike {
 	noiseSuppression: boolean;
 	autoGainControl: boolean;
 	deepFilterNoiseSuppression: boolean;
+	rnNoiseSuppression: boolean;
 	deepFilterNoiseSuppressionLevel: number;
 }
 
@@ -21,6 +22,7 @@ export interface ResolvedVoiceProcessing {
 	browserNoiseSuppression: boolean;
 	autoGainControl: boolean;
 	deepFilter: boolean;
+	rnnoise: boolean;
 	deepFilterNoiseReductionLevel: number;
 	contentHint: '' | 'speech' | 'music';
 }
@@ -45,17 +47,21 @@ export function resolveVoiceProcessing(settings: VoiceProcessingSettingsLike): R
 				browserNoiseSuppression: false,
 				autoGainControl: false,
 				deepFilter: false,
+				rnnoise: false,
 				deepFilterNoiseReductionLevel: DEEP_FILTER_NOISE_REDUCTION_LEVEL_MIN,
 				contentHint: 'music',
 			};
 		case 'custom': {
-			const browserNs = settings.noiseSuppression && !settings.deepFilterNoiseSuppression;
+			const deepFilter = settings.deepFilterNoiseSuppression;
+			const rnnoise = settings.rnNoiseSuppression && !deepFilter;
+			const browserNs = settings.noiseSuppression && !deepFilter && !rnnoise;
 			return {
 				mode: 'custom',
 				echoCancellation: settings.echoCancellation,
 				browserNoiseSuppression: browserNs,
 				autoGainControl: settings.autoGainControl,
-				deepFilter: settings.deepFilterNoiseSuppression,
+				deepFilter,
+				rnnoise,
 				deepFilterNoiseReductionLevel: settings.deepFilterNoiseSuppression
 					? clampDeepFilterNoiseReductionLevel(settings.deepFilterNoiseSuppressionLevel)
 					: DEEP_FILTER_NOISE_REDUCTION_LEVEL_MIN,
@@ -69,6 +75,7 @@ export function resolveVoiceProcessing(settings: VoiceProcessingSettingsLike): R
 				browserNoiseSuppression: true,
 				autoGainControl: settings.autoGainControl,
 				deepFilter: false,
+				rnnoise: false,
 				deepFilterNoiseReductionLevel: DEEP_FILTER_NOISE_REDUCTION_LEVEL_MIN,
 				contentHint: 'speech',
 			};
@@ -82,6 +89,7 @@ export function resolveVoiceProcessingFromState(store: typeof VoiceSettings): Re
 		noiseSuppression: store.noiseSuppression,
 		autoGainControl: store.autoGainControl,
 		deepFilterNoiseSuppression: store.deepFilterNoiseSuppression,
+		rnNoiseSuppression: store.rnNoiseSuppression,
 		deepFilterNoiseSuppressionLevel: store.deepFilterNoiseSuppressionLevel,
 	});
 }
@@ -96,6 +104,7 @@ export function resolveVoiceProcessingFromStateForDeviceLabel(
 		noiseSuppression: store.noiseSuppression,
 		autoGainControl: store.autoGainControl,
 		deepFilterNoiseSuppression: store.deepFilterNoiseSuppression,
+		rnNoiseSuppression: store.rnNoiseSuppression,
 		deepFilterNoiseSuppressionLevel: store.deepFilterNoiseSuppressionLevel,
 	});
 }

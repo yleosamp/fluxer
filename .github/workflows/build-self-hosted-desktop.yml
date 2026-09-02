@@ -12,12 +12,13 @@ concurrency:
 
 env:
   BUILD_CHANNEL: stable
+  FLUXER_SELF_HOSTED: "true"
   PUBLIC_RELEASE_CHANNEL: stable
   PUBLIC_BUILD_VERSION: selfhost-${{ github.run_number }}
 
 jobs:
   windows:
-    name: Windows x64 portable
+    name: Windows x64 installer
     runs-on: windows-2025
     timeout-minutes: 120
     steps:
@@ -59,23 +60,19 @@ jobs:
         working-directory: fluxer_desktop
         env:
           ELECTRON_ARCH: x64
-        run: pnpm exec electron-builder --dir --config electron-builder.config.cjs --win --x64 --publish never
-
-      - name: Create portable ZIP
-        shell: pwsh
-        run: Compress-Archive -Path fluxer_desktop/dist-electron/win-unpacked/* -DestinationPath fluxer_desktop/dist-electron/Fluxer-Windows-x64-portable.zip -Force
+        run: pnpm exec electron-builder --config electron-builder.config.cjs --win nsis --x64 --publish never
 
       - name: Upload Windows package
         uses: actions/upload-artifact@v6
         with:
           name: Fluxer-Windows-x64
-          path: fluxer_desktop/dist-electron/Fluxer-Windows-x64-portable.zip
+          path: fluxer_desktop/dist-electron/Fluxer-Setup-*.exe
           if-no-files-found: error
           retention-days: 30
 
   macos:
-    name: macOS universal unsigned
-    runs-on: macos-15-intel
+    name: macOS Apple Silicon DMG
+    runs-on: macos-15
     timeout-minutes: 150
     steps:
       - name: Checkout
@@ -93,7 +90,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: "1.93.0"
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
+          targets: aarch64-apple-darwin
 
       - name: Set up pnpm
         run: |
@@ -106,25 +103,23 @@ jobs:
       - name: Build desktop app
         working-directory: fluxer_desktop
         env:
-          ELECTRON_ARCH: universal
+          ELECTRON_ARCH: arm64
           FLUXER_MAC_UNSIGNED: "true"
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: pnpm build
 
-      - name: Package universal macOS app
+      - name: Package Apple Silicon macOS app
         working-directory: fluxer_desktop
         env:
-          ELECTRON_ARCH: universal
+          ELECTRON_ARCH: arm64
           FLUXER_MAC_UNSIGNED: "true"
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: pnpm exec electron-builder --config electron-builder.config.cjs --mac --universal --publish never
+        run: pnpm exec electron-builder --config electron-builder.config.cjs --mac dmg --arm64 --publish never
 
       - name: Upload macOS packages
         uses: actions/upload-artifact@v6
         with:
-          name: Fluxer-macOS-universal
-          path: |
-            fluxer_desktop/dist-electron/*.dmg
-            fluxer_desktop/dist-electron/*-mac.zip
+          name: Fluxer-macOS-Apple-Silicon
+          path: fluxer_desktop/dist-electron/*.dmg
           if-no-files-found: error
           retention-days: 30

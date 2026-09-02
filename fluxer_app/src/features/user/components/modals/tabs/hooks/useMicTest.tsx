@@ -37,6 +37,7 @@ export interface MicTestSettings {
 	noiseSuppression: boolean;
 	autoGainControl: boolean;
 	deepFilterNoiseSuppression: boolean;
+	rnNoiseSuppression: boolean;
 	deepFilterNoiseSuppressionLevel: number;
 	voiceProcessingMode: VoiceProcessingMode;
 }
@@ -61,7 +62,6 @@ export const useMicTest = (settings: MicTestSettings) => {
 	const isStartingRef = useRef(false);
 	const restartPendingRef = useRef(false);
 	const activeCaptureSignatureRef = useRef<string | null>(null);
-	const micExplicitlyDenied = MediaPermission.microphoneExplicitlyDenied;
 	const captureSignature = useMemo(
 		() =>
 			JSON.stringify({
@@ -71,12 +71,14 @@ export const useMicTest = (settings: MicTestSettings) => {
 				noiseSuppression: settings.noiseSuppression,
 				autoGainControl: settings.autoGainControl,
 				deepFilterNoiseSuppression: settings.deepFilterNoiseSuppression,
+				rnNoiseSuppression: settings.rnNoiseSuppression,
 				deepFilterNoiseSuppressionLevel: settings.deepFilterNoiseSuppressionLevel,
 				voiceProcessingMode: settings.voiceProcessingMode,
 			}),
 		[
 			settings.autoGainControl,
 			settings.deepFilterNoiseSuppression,
+			settings.rnNoiseSuppression,
 			settings.deepFilterNoiseSuppressionLevel,
 			settings.echoCancellation,
 			settings.inputDeviceId,
@@ -148,10 +150,6 @@ export const useMicTest = (settings: MicTestSettings) => {
 	}, []);
 	const start = useCallback(async () => {
 		if (isStartingRef.current) return;
-		if (micExplicitlyDenied) {
-			handleMediaPermissionBlocked('microphone');
-			return;
-		}
 		isStartingRef.current = true;
 		setIsStarting(true);
 		try {
@@ -159,6 +157,8 @@ export const useMicTest = (settings: MicTestSettings) => {
 			const nativeResult = await ensureMacPermission('microphone', {behavior: 'interactive'});
 			switch (nativeResult) {
 				case 'granted':
+					MediaPermission.clearMicrophoneDenial();
+					break;
 				case 'unsupported-platform':
 					break;
 				case 'denied':
@@ -218,6 +218,7 @@ export const useMicTest = (settings: MicTestSettings) => {
 				playbackTarget,
 				playbackDelaySeconds: MIC_TEST_MONITOR_DELAY_SECONDS,
 				deepFilter: profile.deepFilter,
+				rnnoise: profile.rnnoise,
 				deepFilterNoiseReductionLevel: profile.deepFilterNoiseReductionLevel,
 			});
 			timeDomainDataRef.current = new Float32Array(graphRef.current.analyser.fftSize);
@@ -262,6 +263,8 @@ export const useMicTest = (settings: MicTestSettings) => {
 			updateLevel();
 			if (profile.deepFilter) {
 				logger.info('Applied DeepFilterNet3 noise suppression for mic test');
+			} else if (profile.rnnoise) {
+				logger.info('Applied RNNoise noise suppression for mic test');
 			}
 		} catch (error) {
 			logger.error('Error starting mic test', error);
@@ -278,7 +281,7 @@ export const useMicTest = (settings: MicTestSettings) => {
 				void start();
 			}
 		}
-	}, [captureSignature, settings, updateLevel, stop, micExplicitlyDenied]);
+	}, [captureSignature, settings, updateLevel, stop]);
 	useEffect(() => {
 		if (!isTesting) return;
 		if (graphRef.current) {

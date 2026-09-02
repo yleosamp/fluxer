@@ -30,6 +30,7 @@ type VoiceSettingsPatch = Partial<{
 	noiseSuppression: boolean;
 	autoGainControl: boolean;
 	deepFilterNoiseSuppression: boolean;
+	rnNoiseSuppression: boolean;
 	deepFilterNoiseSuppressionLevel: number;
 	voiceProcessingMode: VoiceProcessingMode;
 	cameraResolution: CameraResolution;
@@ -98,6 +99,7 @@ const MICROPHONE_REFRESH_KEYS: Array<keyof VoiceSettingsPatch> = [
 	'noiseSuppression',
 	'autoGainControl',
 	'deepFilterNoiseSuppression',
+	'rnNoiseSuppression',
 	'deepFilterNoiseSuppressionLevel',
 	'voiceProcessingMode',
 ];

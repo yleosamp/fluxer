@@ -73,6 +73,7 @@ type VoiceSettingsUpdate = Partial<{
 	noiseSuppression: boolean;
 	autoGainControl: boolean;
 	deepFilterNoiseSuppression: boolean;
+	rnNoiseSuppression: boolean;
 	deepFilterNoiseSuppressionLevel: number;
 	voiceProcessingMode: VoiceProcessingMode;
 	cameraResolution: CameraResolution;
@@ -322,6 +323,7 @@ class VoiceSettings {
 	noiseSuppression = DEFAULT_BROWSER_NOISE_SUPPRESSION;
 	autoGainControl = true;
 	deepFilterNoiseSuppressionPrefV2 = DEFAULT_DEEP_FILTER_NOISE_SUPPRESSION;
+	rnNoiseSuppressionPrefV1 = false;
 	deepFilterNoiseSuppressionLevelPrefV2 = 80;
 	noiseSuppressionStandardDefaultMigratedV1 = false;
 	voiceProcessingMode: VoiceProcessingMode = DEFAULT_VOICE_PROCESSING_MODE;
@@ -401,6 +403,7 @@ class VoiceSettings {
 				getNoiseSuppression: false,
 				getAutoGainControl: false,
 				getDeepFilterNoiseSuppression: false,
+				getRnNoiseSuppression: false,
 				getDeepFilterNoiseSuppressionLevel: false,
 				getVoiceProcessingMode: false,
 				getCameraResolution: false,
@@ -509,6 +512,7 @@ class VoiceSettings {
 			'noiseSuppression',
 			'autoGainControl',
 			'deepFilterNoiseSuppressionPrefV2',
+			'rnNoiseSuppressionPrefV1',
 			'deepFilterNoiseSuppressionLevelPrefV2',
 			'noiseSuppressionStandardDefaultMigratedV1',
 			'voiceProcessingMode',
@@ -597,6 +601,14 @@ class VoiceSettings {
 
 	set deepFilterNoiseSuppression(value: boolean) {
 		this.deepFilterNoiseSuppressionPrefV2 = value;
+	}
+
+	get rnNoiseSuppression(): boolean {
+		return this.rnNoiseSuppressionPrefV1;
+	}
+
+	set rnNoiseSuppression(value: boolean) {
+		this.rnNoiseSuppressionPrefV1 = value;
 	}
 
 	get deepFilterNoiseSuppressionLevel(): number {
@@ -751,6 +763,10 @@ class VoiceSettings {
 
 	getDeepFilterNoiseSuppression(): boolean {
 		return this.deepFilterNoiseSuppression;
+	}
+
+	getRnNoiseSuppression(): boolean {
+		return this.rnNoiseSuppression;
 	}
 
 	getDeepFilterNoiseSuppressionLevel(): number {
@@ -1067,6 +1083,7 @@ class VoiceSettings {
 		if (validated.autoGainControl !== undefined) this.autoGainControl = validated.autoGainControl;
 		if (validated.deepFilterNoiseSuppression !== undefined)
 			this.deepFilterNoiseSuppression = validated.deepFilterNoiseSuppression;
+		if (validated.rnNoiseSuppression !== undefined) this.rnNoiseSuppression = validated.rnNoiseSuppression;
 		if (validated.deepFilterNoiseSuppressionLevel !== undefined)
 			this.deepFilterNoiseSuppressionLevel = validated.deepFilterNoiseSuppressionLevel;
 		if (validated.voiceProcessingMode !== undefined) this.voiceProcessingMode = validated.voiceProcessingMode;
@@ -1233,6 +1250,7 @@ class VoiceSettings {
 			noiseSuppression: data.noiseSuppression ?? this.noiseSuppression,
 			autoGainControl: data.autoGainControl ?? this.autoGainControl,
 			deepFilterNoiseSuppression: data.deepFilterNoiseSuppression ?? this.deepFilterNoiseSuppression,
+			rnNoiseSuppression: data.rnNoiseSuppression ?? this.rnNoiseSuppression,
 			deepFilterNoiseSuppressionLevel: Math.max(
 				0,
 				Math.min(100, data.deepFilterNoiseSuppressionLevel ?? this.deepFilterNoiseSuppressionLevel),

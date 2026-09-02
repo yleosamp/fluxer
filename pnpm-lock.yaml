@@ -1430,6 +1430,9 @@ importers:
       '@radix-ui/react-switch':
         specifier: 'catalog:'
         version: 1.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@sapphi-red/web-noise-suppressor':
+        specifier: 0.4.0
+        version: 0.4.0
       '@simplewebauthn/browser':
         specifier: 'catalog:'
         version: 13.2.2
@@ -6676,6 +6679,9 @@ packages:
 
   '@rspack/lite-tapable@1.1.0':
     resolution: {integrity: sha512-E2B0JhYFmVAwdDiG14+DW0Di4Ze4Jg10Pc4/lILUrd5DRCaklduz2OvJ5HYQ6G+hd+WTzqQb3QnDNfK4yvAFYw==}
+
+  '@sapphi-red/web-noise-suppressor@0.4.0':
+    resolution: {integrity: sha512-vkBEL/VDkbeP3qqSRQFRtPLGa19a38JUzO6J0r5D/MQSumrlERy671DAMaETgY6etXjDCoJcD7JBIaXnuGVtVw==}
 
   '@simplewebauthn/browser@13.2.2':
     resolution: {integrity: sha512-FNW1oLQpTJyqG5kkDg5ZsotvWgmBaC6jCHR7Ej0qUNep36Wl9tj2eZu7J5rP+uhXgHaLk+QQ3lqcw2vS5MX1IA==}
@@ -16006,6 +16012,8 @@ snapshots:
       - webpack-cli
 
   '@rspack/lite-tapable@1.1.0': {}
+
+  '@sapphi-red/web-noise-suppressor@0.4.0': {}
 
   '@simplewebauthn/browser@13.2.2': {}
 

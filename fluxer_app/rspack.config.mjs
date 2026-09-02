@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {existsSync, mkdirSync, readdirSync, writeFileSync} from 'node:fs';
+import {createRequire} from 'node:module';
 import path, {dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {
@@ -15,6 +16,7 @@ import {staticFilesPlugin} from './scripts/build/rspack/static-files.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const require = createRequire(import.meta.url);
 const ROOT_DIR = path.resolve(__dirname, '.');
 const MONOREPO_ROOT = path.resolve(__dirname, '..');
 const SRC_DIR = path.join(ROOT_DIR, 'src');
@@ -414,6 +416,18 @@ export default () => {
 						from: PUBLIC_DIR,
 						to: DIST_DIR,
 						noErrorOnMissing: true,
+					},
+					{
+						from: require.resolve('@sapphi-red/web-noise-suppressor/rnnoiseWorklet.js'),
+						to: path.join(DIST_DIR, 'audio-worklets/rnnoiseWorklet.js'),
+					},
+					{
+						from: require.resolve('@sapphi-red/web-noise-suppressor/rnnoise.wasm'),
+						to: path.join(DIST_DIR, 'audio-worklets/rnnoise.wasm'),
+					},
+					{
+						from: require.resolve('@sapphi-red/web-noise-suppressor/rnnoise_simd.wasm'),
+						to: path.join(DIST_DIR, 'audio-worklets/rnnoise_simd.wasm'),
 					},
 				],
 			}),
