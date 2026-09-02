@@ -59,6 +59,7 @@ const CRAWL_CONTROL_CACHE_CONTROL: &str = "public, max-age=300, must-revalidate"
 
 const STATIC_ROOT_FILES: &[(&str, &str)] = &[("/robots.txt", CRAWL_CONTROL_CACHE_CONTROL)];
 const STATIC_ASSET_PREFIXES: &[&str] = &[
+    "/audio-worklets/",
     "/avatars/",
     "/badges/",
     "/desktop/",
@@ -580,6 +581,13 @@ mod tests {
         assert!(is_static_root_file("/robots.txt"));
         assert!(!is_static_root_file("/index.html"));
         assert!(!is_static_root_file("/channels/@me"));
+    }
+
+    #[test]
+    fn rnnoise_worklet_assets_bypass_the_spa_document() {
+        assert!(is_static_asset_path("/audio-worklets/rnnoiseWorklet.js"));
+        assert!(is_static_asset_path("/audio-worklets/rnnoise.wasm"));
+        assert!(is_static_asset_path("/audio-worklets/rnnoise_simd.wasm"));
     }
 
     #[test]
