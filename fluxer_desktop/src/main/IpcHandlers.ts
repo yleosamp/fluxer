@@ -89,6 +89,37 @@ interface TrayRuntimeStateUpdate {
 	buildInfo?: string | null;
 }
 
+type PromptableMediaAccessType = Extract<MediaAccessType, 'microphone' | 'camera'>;
+
+const pendingMediaAccessRequests = new Map<PromptableMediaAccessType, Promise<boolean>>();
+const mediaAccessResultsForThisLaunch = new Map<PromptableMediaAccessType, boolean>();
+
+async function requestMacMediaAccessOnce(type: PromptableMediaAccessType): Promise<boolean> {
+	const status = systemPreferences.getMediaAccessStatus(type);
+	if (status === 'granted') {
+		mediaAccessResultsForThisLaunch.set(type, true);
+		return true;
+	}
+	if (status === 'denied' || status === 'restricted') {
+		mediaAccessResultsForThisLaunch.set(type, false);
+		return false;
+	}
+	const remembered = mediaAccessResultsForThisLaunch.get(type);
+	if (remembered !== undefined) return remembered;
+	const existing = pendingMediaAccessRequests.get(type);
+	if (existing) return existing;
+	const request = systemPreferences.askForMediaAccess(type).then((granted) => {
+		mediaAccessResultsForThisLaunch.set(type, granted);
+		return granted;
+	});
+	pendingMediaAccessRequests.set(type, request);
+	try {
+		return await request;
+	} finally {
+		pendingMediaAccessRequests.delete(type);
+	}
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === 'object';
 }
@@ -432,7 +463,7 @@ export function registerIpcHandlers(): void {
 		if (type === 'screen') {
 			return getTccStatus('screen-recording') === 'granted';
 		}
-		return systemPreferences.askForMediaAccess(type);
+		return requestMacMediaAccessOnce(type);
 	});
 	ipcMain.handle('open-media-access-settings', async (_event, type: MediaAccessType): Promise<void> => {
 		if (process.platform !== 'darwin') {

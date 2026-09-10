@@ -2,6 +2,16 @@ name: Build self-hosted desktop packages
 
 on:
   workflow_dispatch:
+    inputs:
+      target:
+        description: Package to build
+        required: true
+        type: choice
+        options:
+          - macos
+          - windows
+          - all
+        default: macos
 
 permissions:
   contents: read
@@ -19,6 +29,7 @@ env:
 jobs:
   windows:
     name: Windows x64 installer
+    if: ${{ inputs.target == 'windows' || inputs.target == 'all' }}
     runs-on: windows-2025
     timeout-minutes: 120
     steps:
@@ -72,6 +83,7 @@ jobs:
 
   macos:
     name: macOS Apple Silicon DMG
+    if: ${{ inputs.target == 'macos' || inputs.target == 'all' }}
     runs-on: macos-15
     timeout-minutes: 150
     steps:

@@ -1396,7 +1396,7 @@ module.exports = {
 		minimumSystemVersion: macOSMinimumSystemVersion,
 		icon: `build_resources/${iconDir}/_compiled/AppIcon.icns`,
 		darkModeSupport: true,
-		identity: isUnsignedMacBuild ? '-' : undefined,
+		identity: isUnsignedMacBuild ? null : undefined,
 		hardenedRuntime: !isUnsignedMacBuild,
 		gatekeeperAssess: false,
 		notarize: !isUnsignedMacBuild,

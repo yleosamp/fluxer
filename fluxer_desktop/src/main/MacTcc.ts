@@ -19,6 +19,7 @@ interface MacTccModule {
 }
 
 let cached: MacTccModule | null | undefined;
+const requestResultsForThisLaunch = new Map<TccSurface, TccStatus>();
 
 function loadAddon(): MacTccModule | null {
 	if (cached !== undefined) return cached;
@@ -76,14 +77,30 @@ function statusOf(surface: TccSurface): TccStatus {
 }
 
 function requestOf(surface: TccSurface): TccStatus {
+	const current = statusOf(surface);
+	if (current === 'granted') {
+		requestResultsForThisLaunch.set(surface, current);
+		return current;
+	}
+	const remembered = requestResultsForThisLaunch.get(surface);
+	if (remembered !== undefined) return remembered;
 	const mod = loadAddon();
-	if (!mod) return statusWithoutAddon(surface);
+	if (!mod) {
+		const result = statusWithoutAddon(surface);
+		requestResultsForThisLaunch.set(surface, result);
+		return result;
+	}
+	let result: TccStatus;
 	switch (surface) {
 		case 'screen-recording':
-			return mod.requestScreenRecording();
+			result = mod.requestScreenRecording();
+			break;
 		case 'input-monitoring':
-			return mod.requestInputMonitoring();
+			result = mod.requestInputMonitoring();
+			break;
 	}
+	requestResultsForThisLaunch.set(surface, result);
+	return result;
 }
 
 export function getTccStatus(surface: TccSurface): TccStatus {
